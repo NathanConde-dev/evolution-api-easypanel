@@ -1,8 +1,8 @@
-# Usando a imagem oficial da Evolution API
+# Usando a imagem base da Evolution API
 FROM atendai/evolution-api:v2.1.1
 
-# Instalar dependências adicionais necessárias para PostgreSQL e ferramentas
-RUN apt-get update && apt-get install -y postgresql-client && apt-get clean
+# Instalar dependências adicionais usando apk (para Alpine Linux)
+RUN apk add --no-cache postgresql-client
 
 # Definindo as variáveis de ambiente
 ENV DATABASE_ENABLED=true \
@@ -17,13 +17,13 @@ ENV DATABASE_ENABLED=true \
     CACHE_REDIS_URI=redis://localhost:6379 \
     CACHE_REDIS_PREFIX_KEY=evolution
 
-# Copiar scripts de inicialização para o container
+# Copiar scripts de inicialização
 COPY init.sql /tmp/init.sql
 COPY wait-for-services.sh /usr/local/bin/wait-for-services.sh
 RUN chmod +x /usr/local/bin/wait-for-services.sh
 
-# Expondo a porta da aplicação
+# Expor porta da API
 EXPOSE 8080
 
-# Comando para iniciar o banco de dados, rodar migrações e iniciar a aplicação
+# Comando para inicializar serviços e iniciar a aplicação
 CMD ["sh", "-c", "/usr/local/bin/wait-for-services.sh && psql -h localhost -U $DATABASE_USERNAME -d $DATABASE_NAME -f /tmp/init.sql && npm run start:prod"]
