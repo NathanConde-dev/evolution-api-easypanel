@@ -7,15 +7,27 @@ services:
     ports:
       - "8080:8080"
     environment:
+      # Configurações do banco de dados
       DATABASE_ENABLED: "true"
       DATABASE_PROVIDER: "postgresql"
       DATABASE_HOST: "postgres"
       DATABASE_PORT: "5432"
-      DATABASE_USERNAME: "admin"
-      DATABASE_PASSWORD: "admin_password"
-      DATABASE_NAME: "evolution_db"
+      DATABASE_USERNAME: "${POSTGRES_USER:-admin}" # Valor padrão se a variável não for definida
+      DATABASE_PASSWORD: "${POSTGRES_PASSWORD:-$(openssl rand -hex 12)}"
+      DATABASE_NAME: "${POSTGRES_DB:-evolution_db}"
+
+      # Configurações do Redis
+      CACHE_REDIS_ENABLED: "true"
+      CACHE_REDIS_URI: "redis://evolution_redis:6379"
+      CACHE_REDIS_PREFIX_KEY: "evolution"
+      CACHE_REDIS_SAVE_INSTANCES: "true"
+
+      # Chave de autenticação da API
+      AUTHENTICATION_API_KEY: "${AUTHENTICATION_API_KEY:-$(openssl rand -hex 16)}"
     depends_on:
+      - redis
       - postgres
+
   postgres:
     image: postgres:14
     container_name: evolution_postgres
@@ -23,6 +35,21 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: "admin"
-      POSTGRES_PASSWORD: "admin_password"
-      POSTGRES_DB: "evolution_db"
+      POSTGRES_USER: "${POSTGRES_USER:-admin}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-$(openssl rand -hex 12)}"
+      POSTGRES_DB: "${POSTGRES_DB:-evolution_db}"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    container_name: evolution_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  postgres_data:
+  redis_data:
