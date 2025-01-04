@@ -1,44 +1,29 @@
 # Usando a imagem oficial da Evolution API
 FROM atendai/evolution-api:v2.1.1
 
+# Instalar dependências adicionais necessárias para PostgreSQL e ferramentas
+RUN apt-get update && apt-get install -y postgresql-client && apt-get clean
+
 # Definindo as variáveis de ambiente
-ENV AUTHENTICATION_API_KEY=${AUTHENTICATION_API_KEY} \
-    DATABASE_PROVIDER=${DATABASE_PROVIDER} \
-    DATABASE_CONNECTION_URI=${DATABASE_CONNECTION_URI} \
-    DATABASE_ENABLED=true \
-    DATABASE_SAVE_DATA_INSTANCE=${DATABASE_SAVE_DATA_INSTANCE} \
-    DATABASE_SAVE_DATA_NEW_MESSAGE=${DATABASE_SAVE_DATA_NEW_MESSAGE} \
-    DATABASE_SAVE_MESSAGE_UPDATE=${DATABASE_SAVE_MESSAGE_UPDATE} \
-    DATABASE_SAVE_DATA_CONTACTS=${DATABASE_SAVE_DATA_CONTACTS} \
-    DATABASE_SAVE_DATA_CHATS=${DATABASE_SAVE_DATA_CHATS} \
-    DATABASE_SAVE_DATA_LABELS=${DATABASE_SAVE_DATA_LABELS} \
-    DATABASE_SAVE_DATA_HISTORIC=${DATABASE_SAVE_DATA_HISTORIC} \
-    CACHE_REDIS_ENABLED=${CACHE_REDIS_ENABLED} \
-    CACHE_REDIS_URI=${CACHE_REDIS_URI} \
-    CACHE_REDIS_PREFIX_KEY=${CACHE_REDIS_PREFIX_KEY} \
-    CACHE_REDIS_SAVE_INSTANCES=${CACHE_REDIS_SAVE_INSTANCES} \
-    CACHE_LOCAL_ENABLED=${CACHE_LOCAL_ENABLED} \
-    REDIS_HOST=${REDIS_HOST} \
-    REDIS_PORT=${REDIS_PORT} \
-    REDIS_PASSWORD=${REDIS_PASSWORD} \
-    DATABASE_HOST=${DATABASE_HOST} \
-    DATABASE_PORT=${DATABASE_PORT} \
-    DATABASE_USERNAME=${DATABASE_USERNAME} \
-    DATABASE_PASSWORD=${DATABASE_PASSWORD} \
-    DATABASE_NAME=${DATABASE_NAME}
+ENV DATABASE_ENABLED=true \
+    DATABASE_PROVIDER=postgresql \
+    DATABASE_HOST=localhost \
+    DATABASE_PORT=5432 \
+    DATABASE_USERNAME=admin \
+    DATABASE_PASSWORD=admin_password \
+    DATABASE_NAME=evolution_db \
+    AUTHENTICATION_API_KEY=minha-chave-secreta \
+    CACHE_REDIS_ENABLED=true \
+    CACHE_REDIS_URI=redis://localhost:6379 \
+    CACHE_REDIS_PREFIX_KEY=evolution
 
-# Configurando a URI de conexão do banco de dados dinamicamente
-ENV DATABASE_CONNECTION_URI="${DATABASE_PROVIDER}://${DATABASE_USERNAME}:${DATABASE_PASSWORD}@${DATABASE_HOST}:${DATABASE_PORT}/${DATABASE_NAME}"
-
-# Copiando o script de espera para o container
-COPY wait-for-db.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/wait-for-db.sh
+# Copiar scripts de inicialização para o container
+COPY init.sql /tmp/init.sql
+COPY wait-for-services.sh /usr/local/bin/wait-for-services.sh
+RUN chmod +x /usr/local/bin/wait-for-services.sh
 
 # Expondo a porta da aplicação
 EXPOSE 8080
 
-# Configurando diretórios para persistência de logs (opcional)
-VOLUME ["/app/logs"]
-
-# Comando para diagnóstico e execução
-CMD ["sh", "-c", "/usr/local/bin/wait-for-db.sh && redis-cli -u $CACHE_REDIS_URI ping && npm run start:prod"]
+# Comando para iniciar o banco de dados, rodar migrações e iniciar a aplicação
+CMD ["sh", "-c", "/usr/local/bin/wait-for-services.sh && psql -h localhost -U $DATABASE_USERNAME -d $DATABASE_NAME -f /tmp/init.sql && npm run start:prod"]
