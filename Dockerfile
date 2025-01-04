@@ -30,7 +30,7 @@ ENV AUTHENTICATION_API_KEY=${AUTHENTICATION_API_KEY} \
 # Configurando a URI de conexão do banco de dados dinamicamente
 ENV DATABASE_CONNECTION_URI="${DATABASE_PROVIDER}://${DATABASE_USERNAME}:${DATABASE_PASSWORD}@${DATABASE_HOST}:${DATABASE_PORT}/${DATABASE_NAME}"
 
-# Copiando o script para verificar o banco de dados
+# Copiando o script de espera para o container
 COPY wait-for-db.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/wait-for-db.sh
 
